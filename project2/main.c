@@ -18,6 +18,26 @@ typedef struct
 
 int board[9][9];
 
+/*
+void *check_squares(void *params)
+{
+    int square[9] = {0};
+    for( int i = beginning_of_col; i < beginning_of_col + 3; ++i){
+        for( int j = beginning_of_row; j < beginning_of_row + 3; ++j){
+
+            int check = board[j][i];
+
+            if( value is not duplicate){
+            //  check next value
+          } else {
+            //exit thread
+          }
+
+      }
+    }
+}
+*/
+
 int main(int argc, char** argv)
 {
     FILE * fp;
