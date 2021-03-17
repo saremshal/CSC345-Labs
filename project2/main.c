@@ -18,6 +18,55 @@ typedef struct
 
 int board[9][9];
 
+uint8_t check_row(void)
+{
+    uint8_t is_value_present;
+    for(i=0;i<9;i++)
+    {
+        for(j=0;j<9;j++)
+        {
+            is_value_present = 0;
+            for(k=1;k<10;k++)
+            {
+                if(board[i][j] == k)
+                {
+                    is_value_present = 1;
+                }
+            }
+            if(!is_value_present)
+            {
+                return 0
+            }
+        }
+    }
+    return 1;
+}
+
+uint8_t check_column(void)
+{
+    uint8_t is_value_present;
+    for(i=0;i<9;i++)
+    {
+        for(j=0;j<9;j++)
+        {
+            is_value_present = 0;
+            for(k=1;k<10;k++)
+            {
+                if(board[j][i] == k)
+                {
+                    is_value_present = 1;
+                }
+            }
+            if(!is_value_present)
+            {
+                return 0
+            }
+        }
+    }
+    return 1;
+}
+
+
 /*
 void *check_squares(void *params)
 {
