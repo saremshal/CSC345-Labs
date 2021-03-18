@@ -69,16 +69,16 @@ uint8_t check_column(void)
     return 1;
 }
 
-uint8_t check_square(parameters start_pos)
+uint8_t check_square(parameters *start_pos)
 {
     uint8_t is_value_present;
 
     for(int k=1;k<10;k++)
     {
         is_value_present = 0;
-        for(int i=start_pos.row;i<start_pos.row+3;i++)
+        for(int i=start_pos->row;i<start_pos->row+3;i++)
         {
-            for(int j=start_pos.column;j<start_pos.column+3;++j)
+            for(int j=start_pos->column;j<start_pos->column+3;++j)
             {
                 if(board[i][j] == k)
                 {
@@ -136,11 +136,11 @@ int main(int argc, char** argv)
 
     if(mode == 1)
     {
-        parameters data;
+        parameters *data = (parameters*) malloc(sizeof(parameters));
         for(int i=0;i<9;i++)
         {
-            data.row = (i / 3)*3; // 0,0,0,3,3,3,6,6,6
-            data.column = (i % 3)*3; //0,3,6,0,3,6,0,3,6
+            data->row = (i / 3)*3; // 0,0,0,3,3,3,6,6,6
+            data->column = (i % 3)*3; //0,3,6,0,3,6,0,3,6
             check_results[i] = check_square(data);
         }
         check_results[9] = check_row();
