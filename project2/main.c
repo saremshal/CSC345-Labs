@@ -18,6 +18,7 @@ typedef struct
 } parameters;
 
 int board[9][9];
+int check_results[11];
 
 uint8_t check_row(void)
 {
@@ -67,60 +68,51 @@ uint8_t check_column(void)
     return 1;
 }
 
-uint8_t check_square(row_position, column_position)
+uint8_t check_square(parameters start_pos)
 {
-    int square[9] = {0};
     uint8_t is_value_present;
 
-    for( int m = row_position; m < row_position + 3; ++m)
+    for(int k=1;k<10;k++)
     {
-        for( int n = column_position; n < column_position + 3; ++n)
+        is_value_present = 0;
+        for(int i=start_pos.row;i<start_pos.row+3;i++)
         {
-            int square_num = board[m][n];
-            if(square[square_num-1]==0)
+            for(int j=start_pos.column;j<start_pos.column+3;++j)
             {
-                is_value_present = 1;
+                if(board[i][j] == k)
+                {
+                    is_value_present = 1;
+                }
             }
-            else
-            {
-                return 0;
-            }
+        }
+        if(!is_value_present)
+        {
+            return 0;
+        }
+    }
+
+    return 1;
+}
+
+uint8_t check_final_result(int results[11])
+{
+    for(int i=0;i<11;i++)
+    {
+        if(results[i] == 0)
+        {
+            return 0;
         }
     }
     return 1;
 }
-
-
-/*
-void *check_squares(void *params)
-{
-    int square[9] = {0};
-    for( int i = beginning_of_col; i < beginning_of_col + 3; ++i){
-        for( int j = beginning_of_row; j < beginning_of_row + 3; ++j){
-
-            int check = board[j][i];
-
-            if( value is not duplicate){
-            //  check next value
-          } else {
-            //exit thread
-          }
-
-      }
-    }
-}
-*/
 
 int main(int argc, char** argv)
 {
     FILE * fp;
     char str[19];
     int fd;
-		char *ptr;
-		const int ptr_size = 1024;
-    pid_t pids[11];
-    int i;
-    int n = 11;
+	//char *ptr;
+	//const int ptr_size = 1024;
 
     int mode = atoi(argv[1]);
 
@@ -137,46 +129,54 @@ int main(int argc, char** argv)
         }
     }
 
-
-    /*
-    printf("\n");
-    for(int i=0; i<9; i++)
+    if(mode == 1)
     {
-        for(int j=0; j<9; j++)
+        parameters data;
+        for(int i=0;i<9;i++)
         {
-            printf("%d", board[i][j]);
+            data.row = (i / 3)*3; // 0,0,0,3,3,3,6,6,6
+            data.column = (i % 3)*3; //0,3,6,0,3,6,0,3,6
+            check_results[i] = check_square(data);
         }
-        printf("\n");
+        check_results[9] = check_row();
+        check_results[10] = check_column();
     }
-    */
-
-    parameters *data = (parameters*) malloc(sizeof(parameters));
-    data->row = 1;
-    data->column = 1;
-    /* Now create the thread passing it data as a parameter */
-
-
-    /* children processes */
-    for (i = 0; i < n; ++i) {
-        if ((pids[i] = fork()) < 0)
+    else if(mode == 2)
+    {
+        parameters *data = (parameters*) malloc(sizeof(parameters));
+        data->row = 1;
+        data->column = 1;
+        /* Now create the thread passing it data as a parameter */
+    }
+    else if(mode == 3)
+    {
+        pid_t pids[11];
+        /* Child Creation Loop */
+        for (int i = 0; i < 11; ++i)
         {
-          printf("Piping Failed\n");
-          exit (1);
+            pids[i] = fork();
+            if (pids[i] < 0)
+            {
+              printf("Piping Failed\n");
+              exit (1);
+            }
+            else if (pids[i] == 0)
+            {
+                //DoWorkInChild();
+                printf("[son] pid %d from [parent] pid %d\n",getpid(),getppid());
+                exit(0);
+            }
         }
-        else if (pids[i] == 0)
-        {
-            //DoWorkInChild();
-            printf("[son] pid %d from [parent] pid %d\n",getpid(),getppid());
-            exit(0);
-        }
-        else
-        {
-          /*Parent waits for child */
-          wait(NULL);
-        }
+        wait(NULL); /* Parent Waiting Outside For Loop */
+    }
+    else
+    {
+        printf("Mode is not valid, please use either 1, 2, or 3\n");
+        return 0;
     }
 
-
+    int final_result = check_final_result(check_results);
+    printf("SOLUTION: %s (%f seconds)\n",final_result ? "YES" : "NO", 5.1234);
 
     return 0;
 }
