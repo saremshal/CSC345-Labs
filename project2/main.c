@@ -160,13 +160,13 @@ int main(int argc, char** argv)
     for (i = 0; i < n; ++i) {
         if ((pids[i] = fork()) < 0)
         {
-          printf("Piping Failed\n");
-          exit (1);
+            printf("Piping Failed\n");
+            exit (1);
         }
         else if (pids[i] == 0)
         {
             //DoWorkInChild();
-            printf("[son] pid %d from [parent] pid %d\n",getpid(),getppid());
+            printf("child pid %d from parent pid %d\n",getpid(),getppid());
             exit(0);
         }
         else
