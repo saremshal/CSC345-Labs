@@ -66,6 +66,42 @@ uint8_t check_column(void)
     return 1;
 }
 
+void check_square(row_position, column_position)
+{
+    int square[9] = {0};
+    uint8_t is_value_present;
+
+    for( int m = row_position; m < row_position + 3; ++m)
+    {
+        for( int n = column_position; n < column_position + 3; ++n)
+        {
+          int square_num = board[m][n];
+          for(int p = 0; p < 9; ++p)
+          {
+            square[p] = square_num;
+          }
+        }
+    }
+
+
+
+    /*
+
+    for(int i=0;i<9;i++)
+    {
+        for(int k=1;k<10;k++)
+        {
+            is_value_present = 0;
+            for(int j=0;j<9;j++)
+            {
+
+            }
+        }
+    }
+*/
+
+}
+
 
 /*
 void *check_squares(void *params)
@@ -91,6 +127,7 @@ int main(int argc, char** argv)
 {
     FILE * fp;
     char str[19];
+    int row_position, column_position;
 
     int mode = atoi(argv[1]);
 
