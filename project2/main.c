@@ -21,12 +21,12 @@ int board[9][9];
 uint8_t check_row(void)
 {
     uint8_t is_value_present;
-    for(i=0;i<9;i++)
+    for(int i=0;i<9;i++)
     {
-        for(j=0;j<9;j++)
+        for(int k=1;k<10;k++)
         {
             is_value_present = 0;
-            for(k=1;k<10;k++)
+            for(int j=0;j<9;j++)
             {
                 if(board[i][j] == k)
                 {
@@ -35,7 +35,7 @@ uint8_t check_row(void)
             }
             if(!is_value_present)
             {
-                return 0
+                return 0;
             }
         }
     }
@@ -45,12 +45,12 @@ uint8_t check_row(void)
 uint8_t check_column(void)
 {
     uint8_t is_value_present;
-    for(i=0;i<9;i++)
+    for(int i=0;i<9;i++)
     {
-        for(j=0;j<9;j++)
+        for(int k=1;k<10;k++)
         {
             is_value_present = 0;
-            for(k=1;k<10;k++)
+            for(int j=0;j<9;j++)
             {
                 if(board[j][i] == k)
                 {
@@ -59,7 +59,7 @@ uint8_t check_column(void)
             }
             if(!is_value_present)
             {
-                return 0
+                return 0;
             }
         }
     }
