@@ -140,17 +140,6 @@ uint8_t check_final_result(int results[11])
     return 1;
 }
 
-/*
-void *testing(void *args)
-{
-    arguments *in = args;
-    printf("Val: %d\n", in->in);
-    in->out = 2;
-
-    pthread_exit(0);
-}
-*/
-
 int main(int argc, char** argv)
 {
     clock_t start, end;
