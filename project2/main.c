@@ -18,6 +18,20 @@ typedef struct
     int column;
 } parameters;
 
+typedef enum
+{
+    CHECK_TYPE_ROW = 0,
+    CHECK_TYPE_COLUMN,
+    CHECK_TYPE_SQUARE
+} check_types;
+
+typedef struct
+{
+    check_types type;
+    parameters *input;
+    int *result;
+} arguments;
+
 int board[9][9];
 int check_results[11];
 
@@ -95,6 +109,25 @@ uint8_t check_square(parameters *start_pos)
     return 1;
 }
 
+void *runner(void *param)
+{
+    arguments *args = param;
+    switch (args->type)
+    {
+        case CHECK_TYPE_ROW:
+            *(args->result) = check_row();
+            break;
+        case CHECK_TYPE_COLUMN:
+            *(args->result) = check_column();
+            break;
+        case CHECK_TYPE_SQUARE:
+            *(args->result) = check_square(args->input);
+            break;
+    }
+
+    pthread_exit(0);
+}
+
 uint8_t check_final_result(int results[11])
 {
     for(int i=0;i<11;i++)
@@ -106,6 +139,17 @@ uint8_t check_final_result(int results[11])
     }
     return 1;
 }
+
+/*
+void *testing(void *args)
+{
+    arguments *in = args;
+    printf("Val: %d\n", in->in);
+    in->out = 2;
+
+    pthread_exit(0);
+}
+*/
 
 int main(int argc, char** argv)
 {
@@ -148,10 +192,31 @@ int main(int argc, char** argv)
     }
     else if(mode == 2)
     {
-        parameters *data = (parameters*) malloc(sizeof(parameters));
-        data->row = 1;
-        data->column = 1;
-        /* Now create the thread passing it data as a parameter */
+        pthread_t tids[11];
+        arguments inputs[11];
+
+        for(int i=0;i<9;i++)
+        {
+            inputs[i].input = (parameters*) malloc(sizeof(parameters));
+            inputs[i].input->row = (i / 3)*3; // 0,0,0,3,3,3,6,6,6
+            inputs[i].input->column = (i % 3)*3; //0,3,6,0,3,6,0,3,6
+            inputs[i].result = &check_results[i];
+            inputs[i].type = CHECK_TYPE_SQUARE;
+            pthread_create(&tids[i],0,runner,(void *)&inputs[i]);
+        }
+
+        inputs[9].result = &check_results[9];
+        inputs[9].type = CHECK_TYPE_ROW;
+        pthread_create(&tids[9],0,runner,(void *)&inputs[9]);
+
+        inputs[10].result = &check_results[10];
+        inputs[10].type = CHECK_TYPE_COLUMN;
+        pthread_create(&tids[10],0,runner,(void *)&inputs[10]);
+
+        for(int i=0;i<11;i++)
+        {
+            pthread_join(tids[i],NULL);
+        }
     }
     else if(mode == 3)
     {
@@ -184,6 +249,7 @@ int main(int argc, char** argv)
     end = clock();
     cpu_time_used = ((float) (end - start)) / CLOCKS_PER_SEC;
     printf("SOLUTION: %s (%0.4f seconds)\n",final_result ? "YES" : "NO", cpu_time_used);
+    //printf("SOLUTION: %s (%0.4f milliseconds)\n",final_result ? "YES" : "NO", cpu_time_used*1000);
 
     return 0;
 }
