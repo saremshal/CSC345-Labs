@@ -8,6 +8,7 @@
 #include <sys/shm.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
+#include <sys/types.h>
 
 /* structure for passing data to threads */
 typedef struct
@@ -86,7 +87,6 @@ uint8_t check_square(row_position, column_position)
             }
         }
     }
-
     return 1;
 }
 
@@ -115,8 +115,12 @@ int main(int argc, char** argv)
 {
     FILE * fp;
     char str[19];
-    int row_position, column_position;
-
+    int fd;
+		char *ptr;
+		const int ptr_size = 1024;
+    pid_t pids[11];
+    int i;
+    int n = 11;
 
     int mode = atoi(argv[1]);
 
@@ -133,7 +137,6 @@ int main(int argc, char** argv)
         }
     }
 
-        check_square(0,0);
 
     /*
     printf("\n");
@@ -151,6 +154,29 @@ int main(int argc, char** argv)
     data->row = 1;
     data->column = 1;
     /* Now create the thread passing it data as a parameter */
+
+
+    /* children processes */
+    for (i = 0; i < n; ++i) {
+        if ((pids[i] = fork()) < 0)
+        {
+          printf("Piping Failed\n");
+          exit (1);
+        }
+        else if (pids[i] == 0)
+        {
+            //DoWorkInChild();
+            printf("[son] pid %d from [parent] pid %d\n",getpid(),getppid());
+            exit(0);
+        }
+        else
+        {
+          /*Parent waits for child */
+          wait(NULL);
+        }
+    }
+
+
 
     return 0;
 }
