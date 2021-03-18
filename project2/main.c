@@ -9,6 +9,7 @@
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include <sys/types.h>
+#include <time.h>
 
 /* structure for passing data to threads */
 typedef struct
@@ -108,6 +109,10 @@ uint8_t check_final_result(int results[11])
 
 int main(int argc, char** argv)
 {
+    clock_t start, end;
+    float cpu_time_used;
+    start = clock();
+
     FILE * fp;
     char str[19];
     int fd;
@@ -176,7 +181,9 @@ int main(int argc, char** argv)
     }
 
     int final_result = check_final_result(check_results);
-    printf("SOLUTION: %s (%f seconds)\n",final_result ? "YES" : "NO", 5.1234);
+    end = clock();
+    cpu_time_used = ((float) (end - start)) / CLOCKS_PER_SEC;
+    printf("SOLUTION: %s (%0.4f seconds)\n",final_result ? "YES" : "NO", cpu_time_used);
 
     return 0;
 }
