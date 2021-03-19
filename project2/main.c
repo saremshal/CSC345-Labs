@@ -148,10 +148,6 @@ int main(int argc, char** argv)
 
     FILE * fp;
     char str[19];
-    int fd;
-	//char *ptr;
-	//const int ptr_size = 1024;
-
     int mode = atoi(argv[1]);
 
     printf("BOARD STATE IN input.txt:\n");
@@ -175,9 +171,12 @@ int main(int argc, char** argv)
             data->row = (i / 3)*3; // 0,0,0,3,3,3,6,6,6
             data->column = (i % 3)*3; //0,3,6,0,3,6,0,3,6
             check_results[i] = check_square(data);
+          //  printf("%d\n", check_square(data));
         }
         check_results[9] = check_row();
+        //printf("%d\n", check_row());
         check_results[10] = check_column();
+        //printf("%d\n", check_column());
     }
     else if(mode == 2)
     {
@@ -209,10 +208,21 @@ int main(int argc, char** argv)
     }
     else if(mode == 3)
     {
+        int fd;
+        const int SIZE = 4096;
+        char *ptr;
+        const int ptr_size = 1024;
+        const char *name = "COLLATZ";
+        fd = shm_open(name, O_CREAT | O_RDWR, 0666);
+        ftruncate(fd, SIZE);
+        ptr= mmap(0, SIZE, PROT_WRITE, MAP_SHARED, fd, 0);
         pid_t pids[11];
+        parameters *data = (parameters*) malloc(sizeof(parameters));
+
         /* Child Creation Loop */
         for (int i = 0; i < 11; ++i)
         {
+
             pids[i] = fork();
             if (pids[i] < 0)
             {
@@ -221,12 +231,35 @@ int main(int argc, char** argv)
             }
             else if (pids[i] == 0)
             {
-                //DoWorkInChild();
-                printf("child pid %d from parent pid %d\n",getpid(),getppid());
+                if(i<9)
+                {
+                    int check;
+                    data->row = (i / 3)*3; // 0,0,0,3,3,3,6,6,6
+                    data->column = (i % 3)*3; //0,3,6,0,3,6,0,3,6
+
+                    sprintf(ptr,"%u", check_square(data));
+                    ptr += 1;
+                }
+                else if(i==9)
+                {
+                    sprintf(ptr,"%u", check_row());
+                    ptr += 1;
+                }
+                else
+                {
+                    sprintf(ptr,"%u", check_column());
+                    ptr += 1;
+                }
                 exit(0);
-            }
-        }
-        wait(NULL); /* Parent Waiting Outside For Loop */
+          }
+      }
+
+      /* Parent Waiting Outside For Loop */
+      wait(NULL);
+      fd = shm_open(name, O_RDONLY, 0666);
+      ptr = mmap(0,SIZE,PROT_READ,MAP_SHARED, fd, 0);
+      printf("%s", (char *)ptr);
+      shm_unlink(name);
     }
     else
     {
@@ -237,7 +270,7 @@ int main(int argc, char** argv)
     int final_result = check_final_result(check_results);
     end = clock();
     cpu_time_used = ((float) (end - start)) / CLOCKS_PER_SEC;
-    printf("SOLUTION: %s (%0.4f seconds)\n",final_result ? "YES" : "NO", cpu_time_used);
+  //  printf("SOLUTION: %s (%0.4f seconds)\n",final_result ? "YES" : "NO", cpu_time_used);
     //printf("SOLUTION: %s (%0.4f milliseconds)\n",final_result ? "YES" : "NO", cpu_time_used*1000);
 
     return 0;
