@@ -226,61 +226,76 @@ int main(int argc, char** argv)
     }
     else if(mode == 3)
     {
-        int fd;
-        const int SIZE = 4096;
-        char *ptr;
-        const int ptr_size = 1024;
         const char *name = "COLLATZ";
+        const int SIZE = 4096;
+        const int ptr_size = 1024;
+        /* shared memory file descriptor*/
+        int fd;
+        /*pointer to shared memory object*/
+        char *ptr;
+        /*create shared memory*/
         fd = shm_open(name, O_CREAT | O_RDWR, 0666);
+        /*configure shared memory size*/
         ftruncate(fd, SIZE);
+        /*memory map shared memory object*/
         ptr= mmap(0, SIZE, PROT_WRITE, MAP_SHARED, fd, 0);
         pid_t pids[11];
-        siginfo_t info;
         parameters *data = (parameters*) malloc(sizeof(parameters));
 
         /* Child Creation Loop */
         for (int i = 0; i < 11; ++i)
         {
-
+            /*fork a child process*/
             pids[i] = fork();
-            if (pids[i] < 0)
+
+            if (pids[i] < 0) /*error occured*/
             {
                 printf("Piping Failed\n");
                 exit (1);
             }
             else if (pids[i] == 0)
             {
+                /*have the first 9 child processes check each sqaure*/
                 if(i<9)
                 {
                     int check;
                     data->row = (i / 3)*3; // 0,0,0,3,3,3,6,6,6
                     data->column = (i % 3)*3; //0,3,6,0,3,6,0,3,6
 
+                    /*call check_sqaure function and store results in shared memory*/
                     sprintf(ptr,"%u", check_square(data));
                 }
+                /*10th child process will check rows of board*/
                 else if(i==9)
                 {
+                  /*call check_row function and store results in shared memory*/
                     sprintf(ptr,"%u", check_row());
                 }
+                /*Last child process will check columns of board*/
                 else
                 {
+                    /*call check_column function and store results in shared memory*/
                     sprintf(ptr,"%u", check_column());
                 }
                 exit(0);
           }
+          /*parent waits for child process to complete*/
           wait(NULL);
-          ptr += 1;
+          ptr += 1; /*increment pointer*/
       }
-
+      /*opening shared memory*/
       fd = shm_open(name, O_RDONLY, 0666);
       ptr = mmap(0,SIZE,PROT_READ,MAP_SHARED, fd, 0);
+
+      /* print contents of shared memory into check_results function*/
       for(int i = 0;i<11;i++)
       {
           check_results[i] = atoi(&ptr[i]);
       }
+      /*remove shared memory object*/
       shm_unlink(name);
     }
-    else
+    else /*user did not enter valid mode*/
     {
         printf("Mode is not valid, please use either 1, 2, or 3\n");
         return 0;
