@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-//#include <wait.h>
+#include <wait.h>
 #include <fcntl.h>
 #include <pthread.h>
 #include <sys/shm.h>
@@ -10,6 +10,7 @@
 #include <sys/mman.h>
 #include <sys/types.h>
 #include <time.h>
+typedef u_int8_t uint8_t;
 
 /* structure for passing data to threads */
 typedef struct
