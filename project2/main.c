@@ -171,12 +171,9 @@ int main(int argc, char** argv)
             data->row = (i / 3)*3; // 0,0,0,3,3,3,6,6,6
             data->column = (i % 3)*3; //0,3,6,0,3,6,0,3,6
             check_results[i] = check_square(data);
-          //  printf("%d\n", check_square(data));
         }
         check_results[9] = check_row();
-        //printf("%d\n", check_row());
         check_results[10] = check_column();
-        //printf("%d\n", check_column());
     }
     else if(mode == 2)
     {
@@ -217,6 +214,7 @@ int main(int argc, char** argv)
         ftruncate(fd, SIZE);
         ptr= mmap(0, SIZE, PROT_WRITE, MAP_SHARED, fd, 0);
         pid_t pids[11];
+        siginfo_t info;
         parameters *data = (parameters*) malloc(sizeof(parameters));
 
         /* Child Creation Loop */
@@ -238,27 +236,27 @@ int main(int argc, char** argv)
                     data->column = (i % 3)*3; //0,3,6,0,3,6,0,3,6
 
                     sprintf(ptr,"%u", check_square(data));
-                    ptr += 1;
                 }
                 else if(i==9)
                 {
                     sprintf(ptr,"%u", check_row());
-                    ptr += 1;
                 }
                 else
                 {
                     sprintf(ptr,"%u", check_column());
-                    ptr += 1;
                 }
                 exit(0);
           }
+          wait(NULL);
+          ptr += 1;
       }
 
-      /* Parent Waiting Outside For Loop */
-      wait(NULL);
       fd = shm_open(name, O_RDONLY, 0666);
       ptr = mmap(0,SIZE,PROT_READ,MAP_SHARED, fd, 0);
-      printf("%s", (char *)ptr);
+      for(int i = 0;i<11;i++)
+      {
+          check_results[i] = atoi(&ptr[i]);
+      }
       shm_unlink(name);
     }
     else
@@ -270,8 +268,7 @@ int main(int argc, char** argv)
     int final_result = check_final_result(check_results);
     end = clock();
     cpu_time_used = ((float) (end - start)) / CLOCKS_PER_SEC;
-  //  printf("SOLUTION: %s (%0.4f seconds)\n",final_result ? "YES" : "NO", cpu_time_used);
-    //printf("SOLUTION: %s (%0.4f milliseconds)\n",final_result ? "YES" : "NO", cpu_time_used*1000);
+    printf("SOLUTION: %s (%0.4f seconds)\n",final_result ? "YES" : "NO", cpu_time_used);
 
     return 0;
 }
