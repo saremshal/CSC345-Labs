@@ -12,13 +12,14 @@
 #include <time.h>
 typedef u_int8_t uint8_t;
 
-/* structure for passing data to threads */
+/* structure for passing data to check_square */
 typedef struct
 {
     int row;
     int column;
 } parameters;
 
+/* enum that threads use to determine what process to run */
 typedef enum
 {
     CHECK_TYPE_ROW = 0,
@@ -26,6 +27,7 @@ typedef enum
     CHECK_TYPE_SQUARE
 } check_types;
 
+/* structure for passing data to threads */
 typedef struct
 {
     check_types type;
@@ -133,15 +135,21 @@ uint8_t check_square(parameters *start_pos)
 
 void *runner(void *param)
 {
+    /* converts param into arguments variable */
     arguments *args = param;
+
+    /* Looks at which function it should run */
     switch (args->type)
     {
+        /* Runs Row Function and stores result in designated variable */
         case CHECK_TYPE_ROW:
             *(args->result) = check_row();
             break;
+        /* Runs Column Function and stores result in designated variable */
         case CHECK_TYPE_COLUMN:
             *(args->result) = check_column();
             break;
+        /* Runs Square Function and stores result in designated variable */
         case CHECK_TYPE_SQUARE:
             *(args->result) = check_square(args->input);
             break;
@@ -150,33 +158,44 @@ void *runner(void *param)
     pthread_exit(0);
 }
 
+/* Function to validate that all the results are "1" */
 uint8_t check_final_result(int results[11])
 {
+    /* Looks through all the values in the array */
     for(int i=0;i<11;i++)
     {
+        /* If any values are 0, returns 0 */
         if(results[i] == 0)
         {
             return 0;
         }
     }
+    /* If all values are 1, returns 1 */
     return 1;
 }
 
 int main(int argc, char** argv)
 {
+    /* Sets up timer and records current time */
     clock_t start, end;
     float cpu_time_used;
     start = clock();
 
+    /* Initializes file, file buffer, and reads the mode */
     FILE * fp;
     char str[19];
     int mode = atoi(argv[1]);
 
+    /* Prints out beginging line */
     printf("BOARD STATE IN input.txt:\n");
+
+    /* Opens input file in reading mode */
     fp = fopen("input.txt", "r");
 
+    /* Runs through all the lines of the input file */
     for(int i=0; i<9; i++)
     {
+        /* Reads the line, prints the line, and stores values into board array */
         fgets (str, 19, fp);
         printf("%s",str);
         for(int j=0; j<9; j++)
@@ -185,46 +204,64 @@ int main(int argc, char** argv)
         }
     }
 
+    /* Single Process Mode */
     if(mode == 1)
     {
+        /* Initalizes Square data input value */
         parameters *data = (parameters*) malloc(sizeof(parameters));
+        /* Runs through all 9 squares of the board */
         for(int i=0;i<9;i++)
         {
-            data->row = (i / 3)*3; // 0,0,0,3,3,3,6,6,6
-            data->column = (i % 3)*3; //0,3,6,0,3,6,0,3,6
+            /* Picks correct row value (0,3, or 6) */
+            data->row = (i / 3)*3;
+            /* Picks correct column value (0,3, or 6) */
+            data->column = (i % 3)*3;
+            /* Saves result into check_results array */
             check_results[i] = check_square(data);
         }
+        /* Finds result of row and columns */
         check_results[9] = check_row();
         check_results[10] = check_column();
     }
+    /* Multithread Mode */
     else if(mode == 2)
     {
+        /* Initalizes threads and inputs */
         pthread_t tids[11];
         arguments inputs[11];
 
+        /* Goes through all 9 squares */
         for(int i=0;i<9;i++)
         {
+            /* Initalizes Square data input values are respective row & column values */
             inputs[i].input = (parameters*) malloc(sizeof(parameters));
-            inputs[i].input->row = (i / 3)*3; // 0,0,0,3,3,3,6,6,6
-            inputs[i].input->column = (i % 3)*3; //0,3,6,0,3,6,0,3,6
+            inputs[i].input->row = (i / 3)*3;
+            inputs[i].input->column = (i % 3)*3;
+            /* points the result storage to respective array storage */
             inputs[i].result = &check_results[i];
+            /* sets the function to run the square check */
             inputs[i].type = CHECK_TYPE_SQUARE;
+            /* Creates the thread */
             pthread_create(&tids[i],0,runner,(void *)&inputs[i]);
         }
 
+        /* Creates thread to run row function and point to row result storage */
         inputs[9].result = &check_results[9];
         inputs[9].type = CHECK_TYPE_ROW;
         pthread_create(&tids[9],0,runner,(void *)&inputs[9]);
 
+        /* Creates thread to run column function and point to column result storage */
         inputs[10].result = &check_results[10];
         inputs[10].type = CHECK_TYPE_COLUMN;
         pthread_create(&tids[10],0,runner,(void *)&inputs[10]);
 
+        /* Makes all the threads join */
         for(int i=0;i<11;i++)
         {
             pthread_join(tids[i],NULL);
         }
     }
+    /* Multiprocess Mode */
     else if(mode == 3)
     {
         const char *name = "COLLATZ";
@@ -249,7 +286,8 @@ int main(int argc, char** argv)
             /*fork a child process*/
             pids[i] = fork();
 
-            if (pids[i] < 0) /*error occured*/
+            /*error occured*/
+            if (pids[i] < 0)
             {
                 printf("Piping Failed\n");
                 exit (1);
@@ -269,7 +307,7 @@ int main(int argc, char** argv)
                 /*10th child process will check rows of board*/
                 else if(i==9)
                 {
-                  /*call check_row function and store results in shared memory*/
+                    /*call check_row function and store results in shared memory*/
                     sprintf(ptr,"%u", check_row());
                 }
                 /*Last child process will check columns of board*/
@@ -282,7 +320,8 @@ int main(int argc, char** argv)
           }
           /*parent waits for child process to complete*/
           wait(NULL);
-          ptr += 1; /*increment pointer*/
+          /*increment pointer*/
+          ptr += 1;
       }
       /*opening shared memory*/
       fd = shm_open(name, O_RDONLY, 0666);
@@ -296,15 +335,19 @@ int main(int argc, char** argv)
       /*remove shared memory object*/
       shm_unlink(name);
     }
-    else /*user did not enter valid mode*/
+    /*user did not enter valid mode*/
+    else
     {
         printf("Mode is not valid, please use either 1, 2, or 3\n");
         return 0;
     }
 
+    /* Verifies the final result of all the checks (sees if any of the tests fail) */
     int final_result = check_final_result(check_results);
+    /* Reads the click again and computes the run time */
     end = clock();
     cpu_time_used = ((float) (end - start)) / CLOCKS_PER_SEC;
+    /* Prints the result */
     printf("SOLUTION: %s (%0.4f seconds)\n",final_result ? "YES" : "NO", cpu_time_used);
 
     return 0;
