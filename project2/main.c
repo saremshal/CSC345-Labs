@@ -32,80 +32,101 @@ typedef struct
     int *result;
 } arguments;
 
+/* array for storing sudoku board*/
 int board[9][9];
+/*array for storing row, cloumn, and squares validation*/
 int check_results[11];
 
+/*function for checking all 9 rows of board*/
 uint8_t check_row(void)
 {
     uint8_t is_value_present;
+    /*looping through each of 9 rows on board*/
     for(int i=0;i<9;i++)
     {
+      /*looping through sudoku solution numbers*/
         for(int k=1;k<10;k++)
         {
             is_value_present = 0;
+            /*looping through each number in row*/
             for(int j=0;j<9;j++)
             {
+              /*checking if row has valid sudoku solution*/
                 if(board[i][j] == k)
                 {
                     is_value_present = 1;
                 }
             }
+            /*if row does not have number return 0*/
             if(!is_value_present)
             {
                 return 0;
             }
         }
     }
+    /*if row has all numbers of solution return 1*/
     return 1;
 }
 
+/*function for checking all 9 columns of board*/
 uint8_t check_column(void)
 {
     uint8_t is_value_present;
+    /*looping through each of 9 columns on board*/
     for(int i=0;i<9;i++)
     {
+      /*looping through sudoku solution numbers*/
         for(int k=1;k<10;k++)
         {
             is_value_present = 0;
+            /*looping through each number in column*/
             for(int j=0;j<9;j++)
             {
+              /*checking if column has valid sudoku solution*/
                 if(board[j][i] == k)
                 {
                     is_value_present = 1;
                 }
             }
+            /*if cloumn does not have number return 0*/
             if(!is_value_present)
             {
                 return 0;
             }
         }
     }
+    /*if cloumn has all numbers of solution return 1*/
     return 1;
 }
 
+/*function for checking a square of board*/
 uint8_t check_square(parameters *start_pos)
 {
     uint8_t is_value_present;
-
+    /*looping through sudoku solution numbers*/
     for(int k=1;k<10;k++)
     {
         is_value_present = 0;
+        /*take starting position of row and looping through 3 rows*/
         for(int i=start_pos->row;i<start_pos->row+3;i++)
         {
+          /*take starting position of column and looping through 3 columns*/
             for(int j=start_pos->column;j<start_pos->column+3;++j)
             {
+              /*checking if square has valid sudoku solution*/
                 if(board[i][j] == k)
                 {
                     is_value_present = 1;
                 }
             }
         }
+        /*if square does not have number return 0*/
         if(!is_value_present)
         {
             return 0;
         }
     }
-
+    /*if square has all numbers of solution return 1*/
     return 1;
 }
 
