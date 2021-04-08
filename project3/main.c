@@ -3,7 +3,7 @@
 #include <unistd.h>
 #include <string.h>
 
-#define PAGE_TABLE_SIZE (255)
+#define PAGE_TABLE_SIZE (256)
 #define TLB_SIZE (16)
 #define OFFSET_MASK (0x00FF)
 
@@ -105,8 +105,8 @@ int main(int argc, char** argv)
         }
         else
         {
-            tlb_hits++;
             physical_address = (tlb[tlb_position].frame_number << 8) | offset;
+            tlb_hits++;
         }
 
         printf("Virtual address: %d Physical address: %d Value: %d\n", virtual_address, physical_address, value);
