@@ -112,7 +112,8 @@ int main(int argc, char** argv)
             tlb_hits++;
         }
 
-        printf("Virtual address: %d Physical address: %d Value: %d\n", virtual_address, physical_address, value);
+        /* Debug Line */
+        //printf("Virtual address: %d Physical address: %d Value: %d\n", virtual_address, physical_address, value);
 
         fprintf(file_out_1, "%d\n", virtual_address);
         fprintf(file_out_2, "%d\n", physical_address);
