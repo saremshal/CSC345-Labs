@@ -51,8 +51,11 @@ int main(int argc, char** argv)
         page_table[i] = -1;
     }
 
-    FILE* fp = fopen("addresses.txt","r");
-    FILE* file_back_store = fopen("BACKING_STORE.bin","r");
+    FILE *fp = fopen("addresses.txt","r");
+    FILE *file_back_store = fopen("BACKING_STORE.bin","r");
+    FILE *file_out_1 = fopen("out1.txt", "w");
+    FILE *file_out_2 = fopen("out2.txt", "w");
+    FILE *file_out_3 = fopen("out3.txt", "w");
 
     int virtual_address;
     int physical_address;
@@ -110,6 +113,10 @@ int main(int argc, char** argv)
         }
 
         printf("Virtual address: %d Physical address: %d Value: %d\n", virtual_address, physical_address, value);
+
+        fprintf(file_out_1, "%d\n", virtual_address);
+        fprintf(file_out_2, "%d\n", physical_address);
+        fprintf(file_out_3, "%d\n", value);
     }
 
     printf("Page faults = %d / %d, %0.2f\n", page_faults, address_count, (float)page_faults/address_count);
