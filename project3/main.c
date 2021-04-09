@@ -136,18 +136,22 @@ int main(int argc, char** argv)
             /* Page table misses */
             if(page_position == -1)
             {
+                /* Adds value into the page table */
                 page_table[next_available_page_entry].page_number = page_number;
                 page_table[next_available_page_entry].valid_bit = 1;
                 frame_number = next_available_page_entry;
 
+                /* Checks to see if the current physical memory is full or not */
                 if(physical_memory_size == FRAME_SIZE)
                 {
+                    /* Changes the valid bit to false of the oldest frame in the fifo and adds the newest frame into the fifo*/
                     page_table[physical_memory_frame_fifo[next_available_frame_entry]].valid_bit = 0;
                     physical_memory_frame_fifo[next_available_frame_entry] = frame_number;
                     next_available_frame_entry = (next_available_frame_entry + 1) % FRAME_SIZE;
                 }
                 else
                 {
+                    /* Adds the newest frame into the physical memory fifo */
                     physical_memory_frame_fifo[next_available_frame_entry] = frame_number;
                     next_available_frame_entry = (next_available_frame_entry + 1) % FRAME_SIZE;
                     physical_memory_size++;
@@ -162,10 +166,13 @@ int main(int argc, char** argv)
                 /*obtaining frame number from page table*/
                 frame_number = page_position;
 
+                /* Checks to see if the found page has its valid bit false */
                 if(page_table[page_position].valid_bit == 0)
                 {
+                    /* increases page faults */
                     page_faults++;
 
+                    /* Adds the page back into the fifo and changes the valid bit of the frame that was removed to false */
                     page_table[physical_memory_frame_fifo[next_available_frame_entry]].valid_bit = 0;
                     physical_memory_frame_fifo[next_available_frame_entry] = frame_number;
                     next_available_frame_entry = (next_available_frame_entry + 1) % FRAME_SIZE;
