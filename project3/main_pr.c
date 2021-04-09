@@ -2,11 +2,12 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdbool.h>
 
-#define PAGE_TABLE_SIZE (256)
+#define PAGE_TABLE_SIZE (128)
 #define TLB_SIZE (16)
 #define OFFSET_MASK (0x00FF)
-#define FRAME_SIZE (128)
+#define FRAME_SIZE (256)
 
 /* Structure For all the TLB Data */
 typedef struct
@@ -41,6 +42,7 @@ int search_tlb(int find_value)
 {
     for(int i = 0;i < TLB_SIZE;i++)
     {
+        /*if page number found in TLB return page number*/
         if(tlb[i].page_number == find_value)
         {
             return i;
@@ -76,8 +78,8 @@ int main(int argc, char** argv)
     /* Clears out the TLB */
     for(int i = 0;i < TLB_SIZE;i++)
     {
-        tlb_data[i].page_number = -1;
-        tlb_data[i].frame_number = -1;
+        tlb[i].page_number = -1;
+        tlb[i].frame_number = -1;
     }
 
     /* Opens all input and output files */
@@ -115,15 +117,19 @@ int main(int argc, char** argv)
         address_count++;
 
         virtual_address = atoi(line);
+        /*finding address in back store file and storing in value*/
         fseek(file_back_store, virtual_address, SEEK_SET );
         value = fgetc(file_back_store);
 
         page_number = virtual_address >> 8;
         offset = virtual_address & OFFSET_MASK;
 
+        /* search if TLB has page number*/
         tlb_position = search_tlb(page_number);
+        /*TLB Miss*/
         if(tlb_position == -1)
         {
+            /*search if page table has position*/
             page_position = search_page_table(page_number);
 
             if(page_position == -1) /* Page is not found */
@@ -150,6 +156,7 @@ int main(int argc, char** argv)
             }
             else /* Page is found*/
             {
+                /*obtaining frame number from page table*/
                 frame_number = page_position;
 
                 if(page_table[page_position].valid_bit == 0)
@@ -163,29 +170,37 @@ int main(int argc, char** argv)
                 }
             }
 
+            /*obtaing physical address from frame number*/
             physical_address = (frame_number << 8) | offset;
+            /*updating TLB with page number and frame number*/
             tlb[next_available_tlb_entry].page_number = page_number;
             tlb[next_available_tlb_entry].frame_number = frame_number;
+            /*going to next row of TLB*/
             next_available_tlb_entry = (next_available_tlb_entry + 1) % TLB_SIZE;
 
         }
+        /* TLB Hit*/
         else
         {
+            /*obtaining physical adress from TLB*/
             physical_address = (tlb[tlb_position].frame_number << 8) | offset;
-            tlb_hits++;
+            tlb_hits++; /*increment # of TLB hits*/
         }
 
         /* Debug Line */
         //printf("Virtual address: %d Physical address: %d Value: %d\n", virtual_address, physical_address, value);
 
+        /*storing results of addresses in text files*/
         fprintf(file_out_1, "%d\n", virtual_address);
         fprintf(file_out_2, "%d\n", physical_address);
         fprintf(file_out_3, "%d\n", value);
     }
 
+    /*printing page fault rate and TLB hit rate*/
     printf("Page faults = %d / %d, %0.2f\n", page_faults, address_count, (float)page_faults/address_count);
     printf("TLB hits = %d / %d, %0.3f\n", tlb_hits, address_count, (float)tlb_hits/address_count);
 
+    /*closing files*/
     fclose(fp);
     fclose(file_back_store);
 
