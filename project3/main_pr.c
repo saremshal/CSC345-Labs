@@ -31,6 +31,7 @@ int search_tlb(int find_value)
 {
     for(int i = 0;i < TLB_SIZE;i++)
     {
+        /*if page number found in TLB return page number*/
         if(tlb[i].page_number == find_value)
         {
             return i;
@@ -45,6 +46,7 @@ int search_page_table(int find_value)
 {
     for(int i = 0;i < PAGE_TABLE_SIZE;i++)
     {
+        /*if page number found in page table return page number*/
         if(page_table[i].page_number == find_value)
         {
             return i;
@@ -88,6 +90,7 @@ int main(int argc, char** argv)
         address_count++;
 
         virtual_address = atoi(line);
+        /*finding address in back store file and storing in value*/
         fseek(file_back_store, virtual_address, SEEK_SET );
         value = fgetc(file_back_store);
 

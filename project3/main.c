@@ -82,6 +82,7 @@ int main(int argc, char** argv)
         address_count++;
 
         virtual_address = atoi(line);
+        /*finding address in back store file and storing in value*/
         fseek(file_back_store, virtual_address, SEEK_SET );
         value = fgetc(file_back_store);
 
