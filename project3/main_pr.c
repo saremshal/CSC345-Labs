@@ -3,10 +3,10 @@
 #include <unistd.h>
 #include <string.h>
 
-#define PAGE_TABLE_SIZE (128)
+#define PAGE_TABLE_SIZE (256)
 #define TLB_SIZE (16)
 #define OFFSET_MASK (0x00FF)
-#define FRAME_SIZE (256)
+#define FRAME_SIZE (128)
 
 /* Structure For all the TLB Data */
 typedef struct
