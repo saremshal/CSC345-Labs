@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <sys/types.h> 
+#include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -50,6 +50,7 @@ void broadcast(int fromfd, char* message)
 	USR* cur = head;
 	while (cur != NULL) {
 		// check if cur is not the one who sent the message
+        printf("\tChecking %d -> %d\n", fromfd, cur->clisockfd);
 		if (cur->clisockfd != fromfd) {
 			char buffer[512];
 
@@ -60,6 +61,7 @@ void broadcast(int fromfd, char* message)
 			// send!
 			int nsen = send(cur->clisockfd, buffer, nmsg, 0);
 			if (nsen != nmsg) error("ERROR send() failed");
+            printf("\t\tSENT\n");
 		}
 
 		cur = cur->next;
@@ -84,16 +86,15 @@ void* thread_main(void* args)
 	char buffer[256];
 	int nsen, nrcv;
 
-	nrcv = recv(clisockfd, buffer, 255, 0);
-	if (nrcv < 0) error("ERROR recv() failed");
-
-	while (nrcv > 0) {
-		// we send the message to everyone except the sender
-		broadcast(clisockfd, buffer);
-
+	do {
 		nrcv = recv(clisockfd, buffer, 255, 0);
+        buffer[strcspn(buffer, "\n")] = 0;
+        printf("RECV %d: %s\n", clisockfd, buffer);
 		if (nrcv < 0) error("ERROR recv() failed");
-	}
+
+        // we send the message to everyone except the sender
+        broadcast(clisockfd, buffer);
+	} while (nrcv > 0);
 
 	close(clisockfd);
 	//-------------------------------
@@ -110,11 +111,11 @@ int main(int argc, char *argv[])
 	socklen_t slen = sizeof(serv_addr);
 	memset((char*) &serv_addr, 0, sizeof(serv_addr));
 	serv_addr.sin_family = AF_INET;
-	serv_addr.sin_addr.s_addr = INADDR_ANY;	
-	//serv_addr.sin_addr.s_addr = inet_addr("192.168.1.171");	
+	serv_addr.sin_addr.s_addr = INADDR_ANY;
+	//serv_addr.sin_addr.s_addr = inet_addr("192.168.1.171");
 	serv_addr.sin_port = htons(PORT_NUM);
 
-	int status = bind(sockfd, 
+	int status = bind(sockfd,
 			(struct sockaddr*) &serv_addr, slen);
 	if (status < 0) error("ERROR on binding");
 
@@ -123,23 +124,25 @@ int main(int argc, char *argv[])
 	while(1) {
 		struct sockaddr_in cli_addr;
 		socklen_t clen = sizeof(cli_addr);
-		int newsockfd = accept(sockfd, 
+		int newsockfd = accept(sockfd,
 			(struct sockaddr *) &cli_addr, &clen);
 		if (newsockfd < 0) error("ERROR on accept");
 
 		printf("Connected: %s\n", inet_ntoa(cli_addr.sin_addr));
 		add_tail(newsockfd); // add this new client to the client list
 
+        char buffer[512] = {0};
+        send(newsockfd, buffer, 1, 0); //Clears send buffer
+
 		// prepare ThreadArgs structure to pass client socket
 		ThreadArgs* args = (ThreadArgs*) malloc(sizeof(ThreadArgs));
 		if (args == NULL) error("ERROR creating thread argument");
-		
+
 		args->clisockfd = newsockfd;
 
 		pthread_t tid;
 		if (pthread_create(&tid, NULL, thread_main, (void*) args) != 0) error("ERROR creating a new thread");
 	}
 
-	return 0; 
+	return 0;
 }
-

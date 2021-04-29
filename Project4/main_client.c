@@ -6,7 +6,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <netdb.h> 
+#include <netdb.h>
 #include <pthread.h>
 
 #define PORT_NUM 1004
@@ -38,7 +38,7 @@ void* thread_main_recv(void* args)
 		n = recv(sockfd, buffer, 512, 0);
 		if (n < 0) error("ERROR recv() failed");
 
-		printf("\n%s\n", buffer);
+		printf("%s\n", buffer);
 	}
 
 	return NULL;
@@ -89,7 +89,7 @@ int main(int argc, char *argv[])
 
 	printf("Try connecting to %s...\n", inet_ntoa(serv_addr.sin_addr));
 
-	int status = connect(sockfd, 
+	int status = connect(sockfd,
 			(struct sockaddr *) &serv_addr, slen);
 	if (status < 0) error("ERROR connecting");
 
@@ -97,7 +97,7 @@ int main(int argc, char *argv[])
 	pthread_t tid2;
 
 	ThreadArgs* args;
-	
+
 	args = (ThreadArgs*) malloc(sizeof(ThreadArgs));
 	args->clisockfd = sockfd;
 	pthread_create(&tid1, NULL, thread_main_send, (void*) args);
@@ -109,8 +109,9 @@ int main(int argc, char *argv[])
 	// parent will wait for sender to finish (= user stop sending message and disconnect from server)
 	pthread_join(tid1, NULL);
 
+    while(1);
+
 	close(sockfd);
 
 	return 0;
 }
-
