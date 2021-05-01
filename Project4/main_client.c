@@ -70,6 +70,8 @@ void* thread_main_send(void* args)
 		if (n == 0) break; // we stop transmission when user type empty string
 	}
 
+    printf("Disconnecting From Server\n");
+    exit(0);
 	return NULL;
 }
 
