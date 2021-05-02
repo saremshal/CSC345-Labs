@@ -9,14 +9,15 @@
 #include <netdb.h>
 #include <pthread.h>
 
-#define PORT_NUM 1005
+#define PORT_NUM 1004
 
 typedef enum COMMAND_CODE {
     COMMAND_DISCONNECT = 0,
     COMMAND_NEW_ROOM,
     COMMAND_REQUEST_ROOM,
     COMMAND_SHOW_ROOMS,
-    COMMAND_INVALID_REQUEST
+    COMMAND_INVALID_REQUEST,
+    COMMAND_LIST_SIZE
 } COMMAND_CODE;
 
 typedef enum ROOM_CHOICES {
@@ -96,41 +97,14 @@ void* thread_main_send(void* args)
     memset(buffer, 0, 256);
     if(room_choice == CHOICE_NULL)
     {
-        printf("HIT CASE 0\n");
         //Send room list and
         //Ask user what they want to do
         buffer[0] = COMMAND_SHOW_ROOMS;
         n = send(sockfd, buffer, 1, 0);
         if (n < 0) error("ERROR writing to socket");
-
-        /*
-        memset(buffer, 0, 256);
-        fgets(buffer, 255, stdin);
-
-        if(strcmp("new\n",buffer) == 0)
-        {
-            printf("HIT CASE 0.1\n");
-            //Makes new room
-            buffer[0] = COMMAND_NEW_ROOM;
-            n = send(sockfd, buffer, 1, 0);
-            if (n < 0) error("ERROR writing to socket");
-        }
-        else
-        {
-            room_val = atoi(buffer);
-            printf("HIT CASE 0.2\n");
-            //Join room
-            buffer[0] = COMMAND_REQUEST_ROOM;
-            buffer[1] = room_val;
-            printf("ROOM VAL: %d\n", buffer[1]);
-            n = send(sockfd, buffer, 2, 0);
-            if (n < 0) error("ERROR writing to socket");
-        }
-        */
     }
     else if(room_choice == CHOICE_NEW)
     {
-        printf("HIT CASE 1\n");
         //Makes new room
         buffer[0] = COMMAND_NEW_ROOM;
         n = send(sockfd, buffer, 1, 0);
@@ -138,11 +112,9 @@ void* thread_main_send(void* args)
     }
     else
     {
-        printf("HIT CASE 2 - room_val %d\n", room_val);
         //Join room
         buffer[0] = COMMAND_REQUEST_ROOM;
         buffer[1] = room_val;
-        printf("ROOM VAL: %d\n", buffer[1]);
         n = send(sockfd, buffer, 2, 0);
         if (n < 0) error("ERROR writing to socket");
     }
@@ -150,7 +122,6 @@ void* thread_main_send(void* args)
 	while (1) {
 		// You will need a bit of control on your terminal
 		// console or GUI to have a nice input window.
-		//printf("\nPlease enter the message: ");
 		memset(buffer, 0, 256);
 		fgets(buffer, 255, stdin);
 
@@ -175,14 +146,6 @@ int main(int argc, char *argv[])
 
 	int sockfd = socket(AF_INET, SOCK_STREAM, 0);
 	if (sockfd < 0) error("ERROR opening socket");
-
-    //for(int i=0;i<strlen(argv[2]);i++)
-    //{
-    //    printf("%X",argv[2][i]);
-    //}
-    //printf("THE VALUE I READ WAS: %d\n", atoi(argv[2]));
-    //printf("THE string I READ WAS: %s\n", argv[2]);
-    //printf("-done\n");
 
 	struct sockaddr_in serv_addr;
 	socklen_t slen = sizeof(serv_addr);

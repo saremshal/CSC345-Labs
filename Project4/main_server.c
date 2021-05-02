@@ -8,7 +8,7 @@
 #include <arpa/inet.h>
 #include <pthread.h>
 
-#define PORT_NUM 1005
+#define PORT_NUM 1004
 #define MAX_ROOMS 64
 
 typedef enum COMMAND_CODE {
@@ -16,7 +16,8 @@ typedef enum COMMAND_CODE {
     COMMAND_NEW_ROOM,
     COMMAND_REQUEST_ROOM,
     COMMAND_SHOW_ROOMS,
-    COMMAND_INVALID_REQUEST
+    COMMAND_INVALID_REQUEST,
+    COMMAND_LIST_SIZE
 } COMMAND_CODE;
 
 void error(const char *msg)
@@ -32,9 +33,28 @@ typedef struct _USR {
 	struct _USR* next;	// for linked list queue
 } USR;
 
+int sockfd;
 USR *head = NULL;
 USR *tail = NULL;
 int current_room_count = 0;
+
+void display_clients(void)
+{
+    USR* cur = head;
+    char message[256];
+    memset(message,0,256);
+
+    if(cur != NULL)
+    {
+        sprintf(message,"Current Client List:\n");
+        while (cur != NULL)
+        {
+            sprintf(message,"%s\t- Sockfd %d\n", message, cur->clisockfd);
+            cur = cur->next;
+        }
+        printf("%s",message);
+    }
+}
 
 void add_tail(int newclisockfd)
 {
@@ -199,7 +219,7 @@ void room_request(int clisockfd, int room)
     }
     else
     {
-        printf("ROOM NOT FOUND - SENDING ERROR\n");
+        printf("ROOM NOT FOUND - SENDING ERROR TO %d\n", clisockfd);
         char buffer[512];
         buffer[0] = COMMAND_INVALID_REQUEST;
         int nmsg = 1;
@@ -220,7 +240,7 @@ void room_new(int clisockfd)
         cur = cur->next;
     }
     cur->room = ++current_room_count;
-    printf("REQUEST: %d is joining room %d\n", clisockfd, cur->room);
+    printf("REQUEST: %d created room %d\n", clisockfd, cur->room);
     room_accept(clisockfd, cur->room);
 }
 
@@ -245,8 +265,6 @@ void* thread_main(void* args)
 	do {
 		nrcv = recv(clisockfd, buffer, 255, 0);
         buffer[strcspn(buffer, "\n")] = 0;
-        printf("RECV %d: %s\n", clisockfd, buffer);
-        printf("\tCode: %X\n", buffer[0]);
 		if (nrcv < 0) error("ERROR recv() failed");
 
         USR* cur = head;
@@ -263,77 +281,93 @@ void* thread_main(void* args)
         {
             continue;
         }
-        else if(cur->is_picking_room == 1)
+        else
         {
-            if(strcmp(buffer,"new") == 0)
+            if(buffer[0] < COMMAND_LIST_SIZE)
             {
-                room_new(clisockfd);
+                printf("RECV CMD %d: %X\n", clisockfd, buffer[0]);
             }
             else
             {
-                room_request(clisockfd, atoi(buffer));
+                printf("RECV MSG %d: %s\n", clisockfd, buffer);
             }
-            cur->is_picking_room = 0;
-        }
-        else
-        {
-            switch (buffer[0])
-            {
-                case COMMAND_DISCONNECT:
-                {
-                    printf("%d Disconnected\n", clisockfd);
-                    delete_tail(clisockfd);
-                    break;
-                }
-                case COMMAND_NEW_ROOM:
-                {
-                    room_new(clisockfd);
-                    break;
-                }
-                case COMMAND_REQUEST_ROOM:
-                {
-                    room_request(clisockfd, buffer[1]);
-                    break;
-                }
-                case COMMAND_SHOW_ROOMS:
-                {
-                    char buffer[256];
-                    room_list_message(buffer);
-                    int nmsg = strlen(buffer);
 
-                    if(nmsg == 0)
+                if(cur->is_picking_room == 1)
+                {
+                    if(strcmp(buffer,"new") == 0)
                     {
                         room_new(clisockfd);
                     }
                     else
                     {
-                        int nsen = send(clisockfd, buffer, nmsg, 0);
-                        if (nsen != nmsg) error("ERROR send() failed");
-
-                        cur->is_picking_room = 1;
+                        room_request(clisockfd, atoi(buffer));
                     }
-
-                    break;
+                    cur->is_picking_room = 0;
                 }
-                default:
+                else
                 {
-                    // we send the message to everyone except the sender
-                    broadcast(clisockfd, buffer);
+                    switch (buffer[0])
+                    {
+                        case COMMAND_DISCONNECT:
+                        {
+                            printf("%d Disconnected\n", clisockfd);
+                            delete_tail(clisockfd);
+                            display_clients();
+                            break;
+                        }
+                        case COMMAND_NEW_ROOM:
+                        {
+                            room_new(clisockfd);
+                            break;
+                        }
+                        case COMMAND_REQUEST_ROOM:
+                        {
+                            room_request(clisockfd, buffer[1]);
+                            break;
+                        }
+                        case COMMAND_SHOW_ROOMS:
+                        {
+                            char buffer[256];
+                            room_list_message(buffer);
+                            int nmsg = strlen(buffer);
+
+                            if(nmsg == 0)
+                            {
+                                room_new(clisockfd);
+                            }
+                            else
+                            {
+                                int nsen = send(clisockfd, buffer, nmsg, 0);
+                                if (nsen != nmsg) error("ERROR send() failed");
+
+                                cur->is_picking_room = 1;
+                            }
+
+                            break;
+                        }
+                        default:
+                        {
+                            // we send the message to everyone except the sender
+                            broadcast(clisockfd, buffer);
+                        }
+                    }
                 }
             }
-        }
+	} while (head != NULL);
 
-	} while (nrcv > 0);
-
-	close(clisockfd);
-	//-------------------------------
+    printf("No more clients available, shutting down server\n");
+	close(sockfd);
+    usleep(10);
+    exit(0);
 
 	return NULL;
 }
 
 int main(int argc, char *argv[])
 {
-	int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    printf("Starting Server\n");
+
+	sockfd = socket(AF_INET, SOCK_STREAM, 0);
 	if (sockfd < 0) error("ERROR opening socket");
 
 	struct sockaddr_in serv_addr;
@@ -355,10 +389,15 @@ int main(int argc, char *argv[])
 		socklen_t clen = sizeof(cli_addr);
 		int newsockfd = accept(sockfd,
 			(struct sockaddr *) &cli_addr, &clen);
-		if (newsockfd < 0) error("ERROR on accept");
+		if (newsockfd < 0)
+        {
+            printf("Binding removed and server has been shut down!\n");
+            exit(0);
+        }
 
 		printf("Connected: %s\n", inet_ntoa(cli_addr.sin_addr));
 		add_tail(newsockfd); // add this new client to the client list
+        display_clients();
 
         char buffer[512] = {0};
         send(newsockfd, buffer, 1, 0); //Clears send buffer
