@@ -44,6 +44,17 @@ void add_tail(int newclisockfd)
 		tail = tail->next;
 	}
 	counter++;
+
+	USR* cur = head;
+	while (cur != NULL)
+	{
+		if (cur->clisockfd == fromfd)
+		{
+			cur -> username = buffer;
+			break;
+		}
+		cur = cur -> next;
+	}
 }
 
 void broadcast(int fromfd, char* message)
@@ -93,7 +104,6 @@ void* thread_main(void* args)
 	char buffer[256];
 	int nsen, nrcv;
 	int color_val = (counter % MAX_COLORS) + 31;
-
 
 	sprintf(color_buf, "\033[%dm", color_val);
 
