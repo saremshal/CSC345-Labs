@@ -9,6 +9,9 @@
 #include <pthread.h>
 
 #define PORT_NUM 1004
+#define MAX_COLORS 6
+char color_buf[16];
+int counter;
 
 void error(const char *msg)
 {
@@ -16,9 +19,12 @@ void error(const char *msg)
 	exit(1);
 }
 
+
 typedef struct _USR {
 	int clisockfd;		// socket file descriptor
 	struct _USR* next;	// for linked list queue
+	int color_val;
+	char username[32];
 } USR;
 
 USR *head = NULL;
@@ -37,6 +43,7 @@ void add_tail(int newclisockfd)
 		tail->next->next = NULL;
 		tail = tail->next;
 	}
+	counter++;
 }
 
 void broadcast(int fromfd, char* message)
@@ -85,6 +92,10 @@ void* thread_main(void* args)
 	// Now, we receive/send messages
 	char buffer[256];
 	int nsen, nrcv;
+	int color_val = (counter % MAX_COLORS) + 31;
+
+
+	sprintf(color_buf, "\033[%dm", color_val);
 
 	do {
 		nrcv = recv(clisockfd, buffer, 255, 0);

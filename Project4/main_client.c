@@ -10,6 +10,7 @@
 #include <pthread.h>
 
 #define PORT_NUM 1004
+char username[32];
 
 void error(const char *msg)
 {
@@ -90,6 +91,8 @@ int main(int argc, char *argv[])
 	serv_addr.sin_port = htons(PORT_NUM);
 
 	printf("Try connecting to %s...\n", inet_ntoa(serv_addr.sin_addr));
+	printf("Please enter a username...\n");
+	fgets(username,32,stdin);
 
 	int status = connect(sockfd,
 			(struct sockaddr *) &serv_addr, slen);
