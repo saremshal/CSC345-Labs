@@ -10,13 +10,13 @@
 #include <pthread.h>
 
 #define PORT_NUM 1004
-char username[32];
 
 typedef enum COMMAND_CODE {
     COMMAND_DISCONNECT = 0,
     COMMAND_NEW_ROOM,
     COMMAND_REQUEST_ROOM,
     COMMAND_SHOW_ROOMS,
+    COMMAND_USERNAME,
     COMMAND_INVALID_REQUEST,
     COMMAND_LIST_SIZE
 } COMMAND_CODE;
@@ -48,6 +48,24 @@ void disconnect(int sockfd)
     usleep(10);
     printf("Disconnecting From Server\n");
     exit(0);
+}
+
+void send_username(int sockfd)
+{
+    char username[64];
+    char buffer[512];
+    int n;
+
+	memset(username, 0, 64);
+    printf("Please enter a username...\n");
+    usleep(10);
+	fgets(username,64,stdin);
+
+    buffer[0] = COMMAND_USERNAME;
+    sprintf(buffer + 1,"%s",username);
+
+	n = send(sockfd, buffer, strlen(username) + 1, 0);
+    usleep(10);
 }
 
 void* thread_main_recv(void* args)
@@ -90,6 +108,9 @@ void* thread_main_send(void* args)
     int room_val = ((ThreadArgs*) args)->room_val;
 	free(args);
 
+    // User selects a username
+    send_username(sockfd);
+
 	// keep sending messages to the server
 	char buffer[256];
 	int n;
@@ -114,7 +135,7 @@ void* thread_main_send(void* args)
     else
     {
         //Join room
-        buffer[0] = COMMAND_REQUEST_ROOM;
+        buffer[0] = COMMAND_REQUEST_ROOM; //TODO: This doesnt work for some reason
         buffer[1] = room_val;
         n = send(sockfd, buffer, 2, 0);
         if (n < 0) error("ERROR writing to socket");
@@ -143,21 +164,6 @@ void* thread_main_send(void* args)
 	return NULL;
 }
 
-void* send_username(void* args)
-{
-	pthread_detach(pthread_self());
-
-	int sockfd = ((ThreadArgs*) args)->clisockfd;
-	free(args);
-
-	int n;
-
-	memset(username, 0, 32);
-	fgets(username,32,stdin);
-
-	n = send(sockfd, username, strlen(username), 0);
-}
-
 int main(int argc, char *argv[])
 {
 	if (argc < 2) error("Please speicify hostname");
@@ -173,7 +179,6 @@ int main(int argc, char *argv[])
 	serv_addr.sin_port = htons(PORT_NUM);
 
 	printf("Try connecting to %s...\n", inet_ntoa(serv_addr.sin_addr));
-	printf("Please enter a username...\n");
 
 	int status = connect(sockfd,
 			(struct sockaddr *) &serv_addr, slen);
@@ -204,7 +209,7 @@ int main(int argc, char *argv[])
 	args = (ThreadArgs*) malloc(sizeof(ThreadArgs));
 	args->clisockfd = sockfd;
 	pthread_create(&tid2, NULL, thread_main_recv, (void*) args);
-	
+
 	// parent will wait for sender to finish (= user stop sending message and disconnect from server)
 	pthread_join(tid1, NULL);
 

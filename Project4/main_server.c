@@ -16,13 +16,13 @@ typedef enum COMMAND_CODE {
     COMMAND_NEW_ROOM,
     COMMAND_REQUEST_ROOM,
     COMMAND_SHOW_ROOMS,
+    COMMAND_USERNAME,
     COMMAND_INVALID_REQUEST,
     COMMAND_LIST_SIZE
 } COMMAND_CODE;
 
 #define MAX_COLORS 6
-char color_buf[16];
-int counter;
+int counter = 0;
 
 
 void error(const char *msg)
@@ -36,9 +36,9 @@ typedef struct _USR {
 	int clisockfd;		// socket file descriptor
     int room;
     int is_picking_room;
+    char color_val[32];
+    char username[64];
 	struct _USR* next;	// for linked list queue
-	int color_val;
-	char username[32];
 } USR;
 
 int sockfd;
@@ -72,6 +72,8 @@ void add_tail(int newclisockfd)
         head->room = 0;
         head->is_picking_room = 0;
 		head->next = NULL;
+        sprintf(head->color_val, "\033[%dm", (counter % MAX_COLORS) + 31);
+        counter++;
 		tail = head;
 	} else {
 		tail->next = (USR*) malloc(sizeof(USR));
@@ -79,19 +81,9 @@ void add_tail(int newclisockfd)
         tail->next->room = 0;
         tail->next->is_picking_room = 0;
 		tail->next->next = NULL;
+        sprintf(tail->next->color_val, "\033[%dm", (counter % MAX_COLORS) + 31);
+        counter++;
 		tail = tail->next;
-	}
-	counter++;
-
-	USR* cur = head;
-	while (cur != NULL)
-	{
-		if (cur->clisockfd == fromfd)
-		{
-			cur -> username = buffer;
-			break;
-		}
-		cur = cur -> next;
 	}
 }
 
@@ -156,18 +148,18 @@ void room_list_message(char* message)
     }
 }
 
-void broadcast(int fromfd, char* message)
+void broadcast(USR fromfd, char* message)
 {
 	// figure out sender address
 	struct sockaddr_in cliaddr;
 	socklen_t clen = sizeof(cliaddr);
-	if (getpeername(fromfd, (struct sockaddr*)&cliaddr, &clen) < 0) error("ERROR Unknown sender!");
+	if (getpeername(fromfd.clisockfd, (struct sockaddr*)&cliaddr, &clen) < 0) error("ERROR Unknown sender!");
 
     int fromRoom = 0;
     USR* cur = head;
     while (cur != NULL)
     {
-        if (cur->clisockfd == fromfd)
+        if (cur->clisockfd == fromfd.clisockfd)
         {
             fromRoom = cur->room;
             break;
@@ -179,12 +171,12 @@ void broadcast(int fromfd, char* message)
 	cur = head;
 	while (cur != NULL) {
 		// check if cur is not the one who sent the message
-        printf("\tChecking %d -> %d\n", fromfd, cur->clisockfd);
-		if ((cur->clisockfd != fromfd) && (cur->room == fromRoom)) {
+        printf("\tChecking %d -> %d\n", fromfd.clisockfd, cur->clisockfd);
+		if ((cur->clisockfd != fromfd.clisockfd) && (cur->room == fromRoom) && (fromRoom > 0)) {
 			char buffer[512];
 
 			// prepare message
-			sprintf(buffer, "[%s]:%s", inet_ntoa(cliaddr.sin_addr), message);
+			sprintf(buffer, "%s[%s]:%s\033[0m", fromfd.color_val,fromfd.username, message);
 			int nmsg = strlen(buffer);
 
 			// send!
@@ -197,15 +189,15 @@ void broadcast(int fromfd, char* message)
 	}
 }
 
-void room_accept(int fromfd, int room)
+void room_accept(USR fromfd)
 {
     char buffer[512];
-    sprintf(buffer, "Joining Room %d",room);
+    sprintf(buffer, "Joining Room %d",fromfd.room);
     int nmsg = strlen(buffer);
-    int nsen = send(fromfd, buffer, nmsg, 0);
+    int nsen = send(fromfd.clisockfd, buffer, nmsg, 0);
     if (nsen != nmsg) error("ERROR send() failed");
 
-    sprintf(buffer, "[%d has joined the room]", fromfd);
+    sprintf(buffer, "[has joined the room]");
     broadcast(fromfd, buffer);
 }
 
@@ -235,7 +227,7 @@ void room_request(int clisockfd, int room)
         }
         cur->room = room;
         printf("REQUEST: %d is joining room %d\n", clisockfd, cur->room);
-        room_accept(clisockfd, cur->room);
+        room_accept(*cur);
     }
     else
     {
@@ -261,7 +253,7 @@ void room_new(int clisockfd)
     }
     cur->room = ++current_room_count;
     printf("REQUEST: %d created room %d\n", clisockfd, cur->room);
-    room_accept(clisockfd, cur->room);
+    room_accept(*cur);
 }
 
 typedef struct _ThreadArgs {
@@ -281,9 +273,6 @@ void* thread_main(void* args)
 	// Now, we receive/send messages
 	char buffer[256];
 	int nsen, nrcv;
-	int color_val = (counter % MAX_COLORS) + 31;
-
-	sprintf(color_buf, "\033[%dm", color_val);
 
 	do {
 		nrcv = recv(clisockfd, buffer, 255, 0);
@@ -368,10 +357,15 @@ void* thread_main(void* args)
 
                             break;
                         }
+                        case COMMAND_USERNAME:
+                        {
+                            sprintf(cur->username,"%s",buffer+1);
+                            printf("REQUEST: %d's username is %s\n", clisockfd, cur->username);
+                        }
                         default:
                         {
                             // we send the message to everyone except the sender
-                            broadcast(clisockfd, buffer);
+                            broadcast(*cur, buffer);
                         }
                     }
                 }
