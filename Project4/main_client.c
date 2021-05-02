@@ -12,6 +12,21 @@
 #define PORT_NUM 1004
 char username[32];
 
+typedef enum COMMAND_CODE {
+    COMMAND_DISCONNECT = 0,
+    COMMAND_NEW_ROOM,
+    COMMAND_REQUEST_ROOM,
+    COMMAND_SHOW_ROOMS,
+    COMMAND_INVALID_REQUEST,
+    COMMAND_LIST_SIZE
+} COMMAND_CODE;
+
+typedef enum ROOM_CHOICES {
+    CHOICE_NULL = 0,
+    CHOICE_NEW,
+    CHOICE_NUMBER
+} ROOM_CHOICES;
+
 void error(const char *msg)
 {
 	perror(msg);
@@ -20,7 +35,20 @@ void error(const char *msg)
 
 typedef struct _ThreadArgs {
 	int clisockfd;
+    int room_val;
+    int room_choice;
 } ThreadArgs;
+
+void disconnect(int sockfd)
+{
+    char buffer[256];
+    memset(buffer, 0, 256);
+    buffer[0] = COMMAND_DISCONNECT;
+    int n = send(sockfd, buffer, 1, 0);
+    usleep(10);
+    printf("Disconnecting From Server\n");
+    exit(0);
+}
 
 void* thread_main_recv(void* args)
 {
@@ -39,7 +67,15 @@ void* thread_main_recv(void* args)
 		n = recv(sockfd, buffer, 512, 0);
 		if (n < 0) error("ERROR recv() failed");
 
-		printf("%s\n", buffer);
+        if(buffer[0] == COMMAND_INVALID_REQUEST)
+        {
+            printf("ERROR Invalid Input, Shutting Down Client\n");
+            disconnect(sockfd);
+        }
+        else
+        {
+            printf("%s\n", buffer);
+        }
 	}
 
 	return NULL;
@@ -50,25 +86,56 @@ void* thread_main_send(void* args)
 	pthread_detach(pthread_self());
 
 	int sockfd = ((ThreadArgs*) args)->clisockfd;
+    int room_choice = ((ThreadArgs*) args)->room_choice;
+    int room_val = ((ThreadArgs*) args)->room_val;
 	free(args);
 
 	// keep sending messages to the server
 	char buffer[256];
 	int n;
 
+    // Sends room Request
+    memset(buffer, 0, 256);
+    if(room_choice == CHOICE_NULL)
+    {
+        //Send room list and
+        //Ask user what they want to do
+        buffer[0] = COMMAND_SHOW_ROOMS;
+        n = send(sockfd, buffer, 1, 0);
+        if (n < 0) error("ERROR writing to socket");
+    }
+    else if(room_choice == CHOICE_NEW)
+    {
+        //Makes new room
+        buffer[0] = COMMAND_NEW_ROOM;
+        n = send(sockfd, buffer, 1, 0);
+        if (n < 0) error("ERROR writing to socket");
+    }
+    else
+    {
+        //Join room
+        buffer[0] = COMMAND_REQUEST_ROOM;
+        buffer[1] = room_val;
+        n = send(sockfd, buffer, 2, 0);
+        if (n < 0) error("ERROR writing to socket");
+    }
+
 	while (1) {
 		// You will need a bit of control on your terminal
 		// console or GUI to have a nice input window.
-		//printf("\nPlease enter the message: ");
 		memset(buffer, 0, 256);
 		fgets(buffer, 255, stdin);
 
-		if (strlen(buffer) == 1) buffer[0] = '\0';
-
-		n = send(sockfd, buffer, strlen(buffer), 0);
-		if (n < 0) error("ERROR writing to socket");
-
-		if (n == 0) break; // we stop transmission when user type empty string
+		if (strlen(buffer) == 1)
+        {
+            // we stop transmission when user type empty string
+            disconnect(sockfd);
+        }
+        else
+        {
+            n = send(sockfd, buffer, strlen(buffer), 0);
+            if (n < 0) error("ERROR writing to socket");
+        }
 	}
 
     printf("Disconnecting From Server\n");
@@ -119,6 +186,19 @@ int main(int argc, char *argv[])
 
 	args = (ThreadArgs*) malloc(sizeof(ThreadArgs));
 	args->clisockfd = sockfd;
+    if(argv[2] == NULL)
+    {
+        args->room_choice = CHOICE_NULL;
+    }
+    else if(strcmp("new",argv[2]) == 0)
+    {
+        args->room_choice = CHOICE_NEW;
+    }
+    else
+    {
+        args->room_choice = CHOICE_NUMBER;
+        args->room_val = atoi(argv[2]);
+    }
 	pthread_create(&tid1, NULL, thread_main_send, (void*) args);
 
 	args = (ThreadArgs*) malloc(sizeof(ThreadArgs));
@@ -129,8 +209,6 @@ int main(int argc, char *argv[])
 	pthread_join(tid1, NULL);
 
     while(1);
-
-	close(sockfd);
 
 	return 0;
 }
