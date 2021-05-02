@@ -10,6 +10,7 @@
 #include <pthread.h>
 
 #define PORT_NUM 1004
+char username[32];
 
 typedef enum COMMAND_CODE {
     COMMAND_DISCONNECT = 0,
@@ -137,7 +138,24 @@ void* thread_main_send(void* args)
         }
 	}
 
+    printf("Disconnecting From Server\n");
+    exit(0);
 	return NULL;
+}
+
+void* send_username(void* args)
+{
+	pthread_detach(pthread_self());
+
+	int sockfd = ((ThreadArgs*) args)->clisockfd;
+	free(args);
+
+	int n;
+
+	memset(username, 0, 32);
+	fgets(username,32,stdin);
+
+	n = send(sockfd, username, strlen(username), 0);
 }
 
 int main(int argc, char *argv[])
@@ -155,6 +173,7 @@ int main(int argc, char *argv[])
 	serv_addr.sin_port = htons(PORT_NUM);
 
 	printf("Try connecting to %s...\n", inet_ntoa(serv_addr.sin_addr));
+	printf("Please enter a username...\n");
 
 	int status = connect(sockfd,
 			(struct sockaddr *) &serv_addr, slen);
@@ -185,7 +204,7 @@ int main(int argc, char *argv[])
 	args = (ThreadArgs*) malloc(sizeof(ThreadArgs));
 	args->clisockfd = sockfd;
 	pthread_create(&tid2, NULL, thread_main_recv, (void*) args);
-
+	
 	// parent will wait for sender to finish (= user stop sending message and disconnect from server)
 	pthread_join(tid1, NULL);
 

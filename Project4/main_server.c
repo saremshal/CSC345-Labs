@@ -20,17 +20,25 @@ typedef enum COMMAND_CODE {
     COMMAND_LIST_SIZE
 } COMMAND_CODE;
 
+#define MAX_COLORS 6
+char color_buf[16];
+int counter;
+
+
 void error(const char *msg)
 {
 	perror(msg);
 	exit(1);
 }
 
+
 typedef struct _USR {
 	int clisockfd;		// socket file descriptor
     int room;
     int is_picking_room;
 	struct _USR* next;	// for linked list queue
+	int color_val;
+	char username[32];
 } USR;
 
 int sockfd;
@@ -72,6 +80,18 @@ void add_tail(int newclisockfd)
         tail->next->is_picking_room = 0;
 		tail->next->next = NULL;
 		tail = tail->next;
+	}
+	counter++;
+
+	USR* cur = head;
+	while (cur != NULL)
+	{
+		if (cur->clisockfd == fromfd)
+		{
+			cur -> username = buffer;
+			break;
+		}
+		cur = cur -> next;
 	}
 }
 
@@ -261,6 +281,9 @@ void* thread_main(void* args)
 	// Now, we receive/send messages
 	char buffer[256];
 	int nsen, nrcv;
+	int color_val = (counter % MAX_COLORS) + 31;
+
+	sprintf(color_buf, "\033[%dm", color_val);
 
 	do {
 		nrcv = recv(clisockfd, buffer, 255, 0);
