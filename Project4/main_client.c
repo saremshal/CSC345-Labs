@@ -11,6 +11,7 @@
 
 #define PORT_NUM 1004
 
+// Command list client can send
 typedef enum COMMAND_CODE {
     COMMAND_DISCONNECT = 0,
     COMMAND_NEW_ROOM,
@@ -21,12 +22,14 @@ typedef enum COMMAND_CODE {
     COMMAND_LIST_SIZE
 } COMMAND_CODE;
 
+// Enum for the kind of room choice made at launch
 typedef enum ROOM_CHOICES {
     CHOICE_NULL = 0,
     CHOICE_NEW,
     CHOICE_NUMBER
 } ROOM_CHOICES;
 
+// Error Message Function
 void error(const char *msg)
 {
 	perror(msg);
@@ -34,37 +37,47 @@ void error(const char *msg)
 }
 
 typedef struct _ThreadArgs {
-	int clisockfd;
-    int room_val;
-    int room_choice;
+	int clisockfd;   //client's sockfd
+    int room_val;    //client's choosen room
+    int room_choice; //client's choice at launch
 } ThreadArgs;
 
+//Function that disconnects client from server and ends client instance
 void disconnect(int sockfd)
 {
+    //Sends disconnect message to client
     char buffer[256];
     memset(buffer, 0, 256);
     buffer[0] = COMMAND_DISCONNECT;
     int n = send(sockfd, buffer, 1, 0);
+
+    //Delays a bit to prevent crashing and ends client instance
     usleep(10);
     printf("Disconnecting From Server\n");
     exit(0);
 }
 
+//Function to send a selected username to client
 void send_username(int sockfd)
 {
     char username[64];
     char buffer[512];
     int n;
 
+    //Clears username buffer
 	memset(username, 0, 64);
+    //Asks client to select a username
     printf("Please enter a username...\n");
+    //Delay to prevent issues between print and fgets
     usleep(10);
+    //Gets client input
 	fgets(username,64,stdin);
 
+    //Sends username command and username to client
     buffer[0] = COMMAND_USERNAME;
     sprintf(buffer + 1,"%s",username);
-
 	n = send(sockfd, buffer, strlen(username) + 1, 0);
+    //Delay so client doesnt send another message immediatly
     usleep(10);
 }
 
@@ -85,11 +98,13 @@ void* thread_main_recv(void* args)
 		n = recv(sockfd, buffer, 512, 0);
 		if (n < 0) error("ERROR recv() failed");
 
+        //If client sends invalid request message, client will disconnect and terminate
         if(buffer[0] == COMMAND_INVALID_REQUEST)
         {
             printf("ERROR Invalid Input, Shutting Down Client\n");
             disconnect(sockfd);
         }
+        //If message isnt the invalid request command, client will print out the message
         else
         {
             printf("%s\n", buffer);
@@ -117,14 +132,15 @@ void* thread_main_send(void* args)
 
     // Sends room Request
     memset(buffer, 0, 256);
+    //User did not put an argument
     if(room_choice == CHOICE_NULL)
     {
-        //Send room list and
-        //Ask user what they want to do
+        //Requests room list from server
         buffer[0] = COMMAND_SHOW_ROOMS;
         n = send(sockfd, buffer, 1, 0);
         if (n < 0) error("ERROR writing to socket");
     }
+    //User's argument was "new"
     else if(room_choice == CHOICE_NEW)
     {
         //Makes new room
@@ -132,10 +148,11 @@ void* thread_main_send(void* args)
         n = send(sockfd, buffer, 1, 0);
         if (n < 0) error("ERROR writing to socket");
     }
+    //User's argument was a value
     else
     {
-        //Join room
-        buffer[0] = COMMAND_REQUEST_ROOM; //TODO: This doesnt work for some reason
+        //Joins requested room
+        buffer[0] = COMMAND_REQUEST_ROOM;
         buffer[1] = room_val;
         n = send(sockfd, buffer, 2, 0);
         if (n < 0) error("ERROR writing to socket");
@@ -191,16 +208,23 @@ int main(int argc, char *argv[])
 
 	args = (ThreadArgs*) malloc(sizeof(ThreadArgs));
 	args->clisockfd = sockfd;
+
+    //Checks if there is no second argument
     if(argv[2] == NULL)
     {
+        //Makes user's room choice NULL
         args->room_choice = CHOICE_NULL;
     }
+    //Checks if second argument is "new"
     else if(strcmp("new",argv[2]) == 0)
     {
+        //Makes user's room choice NEW
         args->room_choice = CHOICE_NEW;
     }
+    //Else, the second argument is a value
     else
     {
+        //Makes user's room choice NUMBER and saves the number
         args->room_choice = CHOICE_NUMBER;
         args->room_val = atoi(argv[2]);
     }
